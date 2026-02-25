@@ -1,0 +1,336 @@
+﻿<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mujineko-Honkoku Tool v12.0</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+
+<style>
+/* =========================================
+   基本レイアウト
+========================================= */
+:root {
+  --control-bg: #f0f0f0;
+  --border-color: #ccc;
+  --viewer-bg: #222;
+  --notes-bg: #fafafa;
+  --resizer-width: 6px;
+}
+
+body {
+  margin: 0; height: 100vh; display: flex; overflow: hidden;
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  font-size: 14px;
+}
+
+button { cursor: pointer; }
+
+#viewerContainer { width: 50%; height: 100%; position: relative; background: var(--viewer-bg); flex-shrink: 0; }
+#rightContainer { flex: 1; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+.resizer {
+  width: var(--resizer-width);
+  height: 100%;
+  background: #e0e0e0;
+  cursor: col-resize;
+  flex-shrink: 0;
+  z-index: 200;
+  transition: background 0.2s;
+}
+.resizer:hover { background: #bbb; }
+
+#viewer { width: 100%; height: 100%; }
+
+#guideLine {
+  position: absolute; top: 0; left: 80%; height: 100%; width: 20px;
+  background: linear-gradient(to right, transparent 9px, rgba(255, 50, 50, 0.6) 9px, rgba(255, 50, 50, 0.6) 11px, transparent 11px);
+  z-index: 100; display: none; cursor: col-resize;
+  user-select: none; -webkit-user-select: none;
+}
+
+#viewerControls {
+  position: absolute; top: 50%; left: 10px; transform: translateY(-50%); z-index: 110;
+  display: flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.7);
+  padding: 4px; border-radius: 6px; backdrop-filter: blur(4px);
+  user-select: none;
+}
+#viewerControls button { font-size: 11px; padding: 0; width: 26px; height: 26px; line-height: 26px; background: #fff; border: 1px solid #999; border-radius: 4px; font-weight: bold; color: #333; text-align: center; }
+.v-separator { height: 1px; background: #999; margin: 2px 2px; }
+
+#controls { padding: 2px 4px; background: var(--control-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 2px; align-items: center; min-height: 24px; }
+.control-group { display: inline-flex; gap: 1px; padding-right: 4px; margin-right: 1px; border-right: 1px solid #ddd; align-items: center; }
+#controls button { font-size: 10px; padding: 0 4px; height: 20px; line-height: 18px; }
+#controls input[type=file] { font-size: 10px; padding: 1px; width: 90px; height: 20px; }
+#manifestUrl { font-size: 10px; padding: 1px 2px; width: 80px; border:1px solid #ccc; height: 16px; }
+#pageSelect { font-size: 10px; height: 20px; border: 1px solid #ccc; background: #fff; }
+
+#inputAreaWrapper { flex: none; height: 40px; border-bottom: 1px solid var(--border-color); padding: 2px; background: #f9f9f9; display: flex; flex-direction: column; }
+#horizontalInput { flex: 1; width: 100%; resize: none; border: 1px solid #ddd; padding: 2px 4px; font-family: inherit; overflow-y: auto; box-sizing: border-box; font-size: 14px; line-height: 1.4; }
+
+#editorRow { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+#mainArea { width: 75%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
+#notesArea { flex: 1; background: var(--notes-bg); display: flex; flex-direction: column; overflow: hidden; }
+
+.scrollWindow { flex: 1; width: 100%; position: relative; background: #fff; }
+#mainArea .scrollWindow { overflow-x: auto; overflow-y: hidden; }
+#notesArea .scrollWindow { overflow-x: hidden; overflow-y: auto; }
+
+.editor {
+  display: block; box-sizing: border-box; height: 100%; width: max-content;
+  padding: 15px 30px; outline: none; writing-mode: vertical-rl; text-orientation: upright;
+  font-family: "Hiragino Mincho ProN", serif; font-size: 15.0px; line-height: 1.9; 
+  white-space: pre-wrap; word-break: break-all;
+}
+
+/* ★備考欄のフォントを小さく調整 */
+#notesEditor { 
+  writing-mode: horizontal-tb; width: 100%; height: auto; min-height: 100%; 
+  padding: 10px; font-family: sans-serif; font-size: 11px; line-height: 1.4; 
+  background: var(--notes-bg); color: #555; 
+}
+</style>
+</head>
+<body>
+
+<div id="viewerContainer">
+  <div id="viewer"></div>
+  <div id="guideLine"></div>
+  <div id="viewerControls">
+    <button onclick="toggleFilter('contrast')">濃</button>
+    <button onclick="toggleFilter('invert')">転</button>
+    <button onclick="resetFilters()">解</button>
+    <div class="v-separator"></div>
+    <button onclick="toggleGuide()">線</button>
+    <div class="v-separator"></div>
+    <button onclick="rotate(-90)">↶</button>
+    <button onclick="rotate(90)">↷</button>
+  </div>
+</div>
+
+<div id="resizerMain" class="resizer"></div>
+
+<div id="rightContainer">
+  <div id="controls">
+    <span class="control-group"><input type="file" id="imgLoader" multiple></span>
+    <span class="control-group"><input type="text" id="manifestUrl" placeholder="IIIF URL"><button onclick="loadManifest()">読込</button></span>
+    <span class="control-group">
+        <button onclick="nextPage()">←</button>
+        <select id="pageSelect" onchange="jumpPage(this.value)"></select>
+        <button onclick="prevPage()">→</button>
+    </span>
+    <span class="control-group">
+        <button onclick="execCmd('undo')">戻</button><button onclick="execCmd('redo')">直</button>
+        <button onclick="setColor('black')" style="color:black; font-weight:bold;">黒</button>
+        <button onclick="setColor('blue')" style="color:blue; font-weight:bold;">青</button>
+        <button onclick="setColor('red')" style="color:red; font-weight:bold;">赤</button>
+    </span>
+    <span class="control-group">
+        <button onclick="copyCurrentPage()">頁写</button><button onclick="copyAll()">全写</button>
+        <button onclick="exportSession()">保存</button>
+        <button onclick="document.getElementById('sessionLoader').click()">読込</button>
+        <input type="file" id="sessionLoader" style="display:none">
+        <button onclick="resetData()" style="background:#fee; color:#c00; border-color:#fcc;">全消去</button>
+    </span>
+  </div>
+
+  <div id="inputAreaWrapper">
+    <textarea id="horizontalInput" placeholder="入力して Shift+Enter"></textarea>
+  </div>
+
+  <div id="editorRow">
+    <div id="mainArea">
+      <div class="scrollWindow"><div id="mainEditor" class="editor" contenteditable="true"></div></div>
+    </div>
+    <div id="resizerEditor" class="resizer"></div>
+    <div id="notesArea">
+      <div class="scrollWindow"><div id="notesEditor" class="editor" contenteditable="true"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let images = [], texts = [], notesData = [], currentPage = 0;
+let filterState = { contrast: false, invert: false };
+const mainEditor = document.getElementById("mainEditor");
+const notesEditor = document.getElementById("notesEditor");
+const hIn = document.getElementById("horizontalInput");
+const pSelect = document.getElementById("pageSelect");
+const guideLine = document.getElementById("guideLine");
+const viewerContainer = document.getElementById("viewerContainer");
+const mainArea = document.getElementById("mainArea");
+let savedRange = null;
+
+/* --- ビューア初期化（サムネイルサイズと拡大率維持の設定） --- */
+const viewer = OpenSeadragon({
+  id: "viewer", 
+  prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/",
+  showNavigator: true, 
+  navigatorPosition: "BOTTOM_LEFT",
+  navigatorWidth: "80px",  // ★サムネイルを小さく
+  navigatorHeight: "80px", // ★サムネイルを小さく
+  animationTime: 0.3,
+  gestureSettingsMouse: { clickToZoom: false },
+  preserveViewport: true,  // ★ページ切り替え時も拡大率・位置を維持
+  visibilityRatio: 0.5     // 画像が画面外に消えすぎないように
+});
+
+/* --- リサイズロジック --- */
+let activeResizer = null;
+document.getElementById("resizerMain").addEventListener("mousedown", () => { activeResizer = "main"; document.body.style.cursor = 'col-resize'; });
+document.getElementById("resizerEditor").addEventListener("mousedown", () => { activeResizer = "editor"; document.body.style.cursor = 'col-resize'; });
+
+document.addEventListener("mousemove", (e) => {
+    if (!activeResizer) return;
+    if (activeResizer === "main") {
+        let percentage = (e.clientX / window.innerWidth) * 100;
+        if (percentage > 10 && percentage < 90) viewerContainer.style.width = percentage + "%";
+    } else if (activeResizer === "editor") {
+        const editorRow = document.getElementById("editorRow");
+        const rect = editorRow.getBoundingClientRect();
+        let percentage = ((e.clientX - rect.left) / rect.width) * 100;
+        if (percentage > 10 && percentage < 90) mainArea.style.width = percentage + "%";
+    }
+});
+document.addEventListener("mouseup", () => {
+    if (activeResizer) {
+        activeResizer = null;
+        document.body.style.cursor = '';
+        // ★リサイズ時にgoHomeせず、現在の拡大表示を維持
+    }
+});
+
+/* --- ガイド線ドラッグ --- */
+let isDraggingGuide = false;
+guideLine.addEventListener("mousedown", (e) => { isDraggingGuide = true; e.preventDefault(); document.body.style.userSelect = 'none'; document.body.style.cursor = 'col-resize'; });
+document.addEventListener("mousemove", (e) => {
+    if (!isDraggingGuide) return;
+    const rect = viewerContainer.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    if (x < 0) x = 0; if (x > rect.width) x = rect.width;
+    guideLine.style.left = x + "px";
+});
+document.addEventListener("mouseup", () => { if (isDraggingGuide) { isDraggingGuide = false; document.body.style.userSelect = ''; document.body.style.cursor = ''; } });
+
+/* --- 機能系 --- */
+function applyFilters() {
+    const canvases = document.querySelectorAll('#viewer canvas');
+    let s = "";
+    if (filterState.contrast) s += "contrast(250%) grayscale(80%) ";
+    if (filterState.invert) s += "invert(100%) ";
+    canvases.forEach(c => { c.style.filter = s.trim(); });
+}
+function toggleFilter(t) { filterState[t] = !filterState[t]; applyFilters(); }
+function resetFilters() { filterState = { contrast: false, invert: false }; applyFilters(); viewer.viewport.setRotation(0); viewer.viewport.goHome(); }
+function rotate(d) { viewer.viewport.setRotation(viewer.viewport.getRotation() + d); }
+function toggleGuide() { guideLine.style.display = (guideLine.style.display === "none" || guideLine.style.display === "") ? "block" : "none"; }
+function execCmd(cmd, val=null) { document.execCommand(cmd, false, val); save(); }
+function setColor(c) { execCmd("foreColor", c); }
+function autoSave() {
+    localStorage.setItem("honkoku_texts", JSON.stringify(texts));
+    localStorage.setItem("honkoku_notes", JSON.stringify(notesData));
+    localStorage.setItem("honkoku_page", currentPage);
+}
+function autoLoad() {
+    texts = JSON.parse(localStorage.getItem("honkoku_texts")) || [];
+    notesData = JSON.parse(localStorage.getItem("honkoku_notes")) || [];
+    currentPage = parseInt(localStorage.getItem("honkoku_page")) || 0;
+    updatePageInfo(); loadPage();
+}
+function resetData() {
+    if (confirm("全てのページ内容とメモを完全に消去しますか？")) {
+        texts = []; notesData = []; currentPage = 0;
+        localStorage.removeItem("honkoku_texts"); localStorage.removeItem("honkoku_notes"); localStorage.removeItem("honkoku_page");
+        mainEditor.innerHTML = ""; notesEditor.innerHTML = ""; images = []; viewer.close();
+        updatePageInfo(); alert("リセット完了");
+    }
+}
+window.addEventListener('DOMContentLoaded', autoLoad);
+
+document.getElementById("imgLoader").addEventListener("change", function(e) { images = Array.from(e.target.files); initPages(); });
+async function loadManifest() {
+    const url = document.getElementById('manifestUrl').value.trim();
+    if (!url) return;
+    try {
+        const res = await fetch(url); const json = await res.json();
+        let canvases = (json.sequences) ? json.sequences[0].canvases : json.items;
+        images = canvases.map(c => {
+            if (c.images) return c.images[0].resource.service['@id'] + '/info.json';
+            if (c.items) return c.items[0].items[0].body.service[0]['@id'] || c.items[0].items[0].body.service['id'];
+            return null;
+        }).filter(Boolean);
+        initPages(); alert("IIIF読込完了");
+    } catch (e) { alert("失敗"); }
+}
+function initPages() {
+    const total = images.length || 1;
+    if (texts.length < total) {
+        texts = texts.concat(new Array(total - texts.length).fill(""));
+        notesData = notesData.concat(new Array(total - notesData.length).fill(""));
+    }
+    currentPage = 0; loadPage();
+}
+function loadPage() {
+    const img = images[currentPage];
+    if (img) {
+      if (typeof img === 'string') viewer.open(img);
+      else { const r = new FileReader(); r.onload = e => viewer.open({ type: 'image', url: e.target.result }); r.readAsDataURL(img); }
+    }
+    mainEditor.innerHTML = texts[currentPage] || "";
+    notesEditor.innerHTML = notesData[currentPage] || "";
+    savedRange = null; updatePageInfo();
+}
+function updatePageInfo() {
+    const total = Math.max(images.length, texts.length) || 1;
+    pSelect.innerHTML = "";
+    for (let i = 0; i < total; i++) {
+        const opt = document.createElement("option");
+        opt.value = i; opt.innerText = (i + 1) + " / " + total;
+        if (i === currentPage) opt.selected = true;
+        pSelect.appendChild(opt);
+    }
+}
+function jumpPage(val) { save(); currentPage = parseInt(val); loadPage(); }
+function save() { texts[currentPage] = mainEditor.innerHTML; notesData[currentPage] = notesEditor.innerHTML; autoSave(); }
+mainEditor.addEventListener("input", save); notesEditor.addEventListener("input", save);
+function prevPage() { if (currentPage > 0) { save(); currentPage--; loadPage(); } }
+function nextPage() { if (currentPage < Math.max(images.length, texts.length) - 1) { save(); currentPage++; loadPage(); } }
+
+function savePosition() {
+    const sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (mainEditor.contains(range.commonAncestorContainer)) { savedRange = range.cloneRange(); }
+    }
+}
+mainEditor.addEventListener("mouseup", savePosition); mainEditor.addEventListener("keyup", savePosition); mainEditor.addEventListener("focus", savePosition);
+
+hIn.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && e.shiftKey) {
+        e.preventDefault();
+        const val = hIn.value; if (!val) return;
+        const htmlToInsert = val.replace(/\n/g, "<br>");
+        if (savedRange) {
+            const sel = window.getSelection();
+            sel.removeAllRanges(); sel.addRange(savedRange);
+            document.execCommand("insertHTML", false, htmlToInsert);
+            savePosition();
+        } else {
+            mainEditor.insertAdjacentHTML("beforeend", `<div>${htmlToInsert}</div>`);
+        }
+        hIn.value = ""; save(); hIn.focus();
+    }
+});
+
+const formatText = (h) => (h||"").replace(/<div>|<p>|<br>/gi,"\n").replace(/<\/div>|<\/p>/gi,"").replace(/<[^>]+>/g,"").trim();
+function copyCurrentPage() { save(); navigator.clipboard.writeText(formatText(mainEditor.innerHTML)); alert("コピーしました"); }
+function copyAll() { save(); let o = ""; texts.forEach((t, i) => o += `【${i+1}】\n${formatText(t)}\n\n`); navigator.clipboard.writeText(o); alert("全コピーしました"); }
+function exportSession() { save(); const b = new Blob([JSON.stringify({texts, notes:notesData, page:currentPage})], {type:"application/json"}); const l = document.createElement("a"); l.href=URL.createObjectURL(b); l.download="honkoku.json"; l.click(); }
+document.getElementById("sessionLoader").addEventListener("change", function(e) {
+    const f = e.target.files[0]; const r = new FileReader();
+    r.onload = ev => { const d = JSON.parse(ev.target.result); texts=d.texts; notesData=d.notes; currentPage=d.page; loadPage(); }; r.readAsText(f);
+});
+</script>
+</body>
+</html>
