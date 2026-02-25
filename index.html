@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mujineko-Honkoku Tool v12.0</title>
+<title>Mujineko-Honkoku Tool</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
 
@@ -66,8 +66,11 @@ button { cursor: pointer; }
 #manifestUrl { font-size: 10px; padding: 1px 2px; width: 80px; border:1px solid #ccc; height: 16px; }
 #pageSelect { font-size: 10px; height: 20px; border: 1px solid #ccc; background: #fff; }
 
-#inputAreaWrapper { flex: none; height: 40px; border-bottom: 1px solid var(--border-color); padding: 2px; background: #f9f9f9; display: flex; flex-direction: column; }
+#inputAreaWrapper { flex: none; height: 45px; border-bottom: 1px solid var(--border-color); padding: 2px; background: #f9f9f9; display: flex; flex-direction: column; position: relative; }
 #horizontalInput { flex: 1; width: 100%; resize: none; border: 1px solid #ddd; padding: 2px 4px; font-family: inherit; overflow-y: auto; box-sizing: border-box; font-size: 14px; line-height: 1.4; }
+/* ★右下のひっそりリンク */
+.footer-link { position: absolute; bottom: 2px; right: 5px; font-size: 10px; color: #999; text-decoration: none; cursor: pointer; }
+.footer-link:hover { color: #666; text-decoration: underline; }
 
 #editorRow { flex: 1; display: flex; min-height: 0; overflow: hidden; }
 #mainArea { width: 75%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
@@ -77,6 +80,7 @@ button { cursor: pointer; }
 #mainArea .scrollWindow { overflow-x: auto; overflow-y: hidden; }
 #notesArea .scrollWindow { overflow-x: hidden; overflow-y: auto; }
 
+/* 縦書きエディタ */
 .editor {
   display: block; box-sizing: border-box; height: 100%; width: max-content;
   padding: 15px 30px; outline: none; writing-mode: vertical-rl; text-orientation: upright;
@@ -84,12 +88,29 @@ button { cursor: pointer; }
   white-space: pre-wrap; word-break: break-all;
 }
 
-/* ★備考欄のフォントを小さく調整 */
 #notesEditor { 
   writing-mode: horizontal-tb; width: 100%; height: auto; min-height: 100%; 
   padding: 10px; font-family: sans-serif; font-size: 11px; line-height: 1.4; 
   background: var(--notes-bg); color: #555; 
 }
+
+/* ★注意事項ポップアップ（スプラッシュ画面） */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+}
+.modal-content {
+  background: #fff; padding: 25px 35px; border-radius: 8px; max-width: 550px; width: 90%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3); line-height: 1.6; font-size: 13px; color: #333;
+}
+.modal-content h2 { margin-top: 0; font-size: 18px; border-bottom: 2px solid #ddd; padding-bottom: 8px; color: #111; text-align: center; }
+.modal-content h3 { font-size: 14px; margin: 15px 0 5px; color: #c00; }
+.modal-content p { margin: 0 0 10px; }
+.modal-close-btn {
+  display: block; margin: 25px auto 0; padding: 10px 30px; font-size: 15px; font-weight: bold;
+  background: #0056b3; color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;
+}
+.modal-close-btn:hover { background: #004494; }
 </style>
 </head>
 <body>
@@ -121,10 +142,12 @@ button { cursor: pointer; }
         <button onclick="prevPage()">→</button>
     </span>
     <span class="control-group">
-        <button onclick="execCmd('undo')">戻</button><button onclick="execCmd('redo')">取消</button>
+        <button onclick="execCmd('undo')">戻</button><button onclick="execCmd('redo')">直</button>
         <button onclick="setColor('black')" style="color:black; font-weight:bold;">黒</button>
         <button onclick="setColor('blue')" style="color:blue; font-weight:bold;">青</button>
         <button onclick="setColor('red')" style="color:red; font-weight:bold;">赤</button>
+        <button onclick="changeFontSize(1)" title="文字を大きく">大</button>
+        <button onclick="changeFontSize(-1)" title="文字を小さく">小</button>
     </span>
     <span class="control-group">
         <button onclick="copyCurrentPage()">頁写</button><button onclick="copyAll()">全写</button>
@@ -137,6 +160,7 @@ button { cursor: pointer; }
 
   <div id="inputAreaWrapper">
     <textarea id="horizontalInput" placeholder="入力して Shift+Enter"></textarea>
+    <a class="footer-link" onclick="showModal()">ⓘ 免責事項・規約</a>
   </div>
 
   <div id="editorRow">
@@ -150,8 +174,25 @@ button { cursor: pointer; }
   </div>
 </div>
 
+<div id="infoModal" class="modal-overlay">
+  <div class="modal-content">
+    <h2>🐈 Mujineko-Honkoku Tool<br><span style="font-size:14px; font-weight:normal;">ご利用にあたってのお願い</span></h2>
+    <h3>1. プライバシーとセキュリティ</h3>
+    <p>本ツールに読み込んだ画像や入力テキストは、すべてお使いのブラウザ内でのみ処理されます。外部サーバーへ送信されることは一切ありませんので、未公開資料でも安心してご利用いただけます。</p>
+    
+    <h3>2. データのこまめな保存</h3>
+    <p>入力内容はブラウザに一時保存されますが、履歴消去等で消える可能性があります。作業の区切りには必ず上部の「保存」ボタンを押し、バックアップファイル（honkoku.json）をお手元に残してください。</p>
+
+    <h3>3. 免責・禁止事項</h3>
+    <p>本ツールの利用により生じたデータ消失等の損害について、開発者は責任を負いません。また、<strong>本ツールのプログラムコードの無断複製・改変・再配布・販売は固く禁じます。</strong>他の方へ紹介される際は、本ツールの公開URLをそのまま共有してください。</p>
+    
+    <button class="modal-close-btn" onclick="agreeAndClose()">同意してはじめる</button>
+  </div>
+</div>
+
 <script>
 let images = [], texts = [], notesData = [], currentPage = 0;
+let currentFontSize = 15;
 let filterState = { contrast: false, invert: false };
 const mainEditor = document.getElementById("mainEditor");
 const notesEditor = document.getElementById("notesEditor");
@@ -162,19 +203,28 @@ const viewerContainer = document.getElementById("viewerContainer");
 const mainArea = document.getElementById("mainArea");
 let savedRange = null;
 
-/* --- ビューア初期化（サムネイルサイズと拡大率維持の設定） --- */
 const viewer = OpenSeadragon({
-  id: "viewer", 
-  prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/",
-  showNavigator: true, 
-  navigatorPosition: "BOTTOM_LEFT",
-  navigatorWidth: "80px",  // ★サムネイルを小さく
-  navigatorHeight: "80px", // ★サムネイルを小さく
-  animationTime: 0.3,
-  gestureSettingsMouse: { clickToZoom: false },
-  preserveViewport: true,  // ★ページ切り替え時も拡大率・位置を維持
-  visibilityRatio: 0.5     // 画像が画面外に消えすぎないように
+  id: "viewer", prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/",
+  showNavigator: true, navigatorPosition: "BOTTOM_LEFT", navigatorWidth: "80px", navigatorHeight: "80px",
+  animationTime: 0.3, gestureSettingsMouse: { clickToZoom: false },
+  preserveViewport: true, visibilityRatio: 0.5
 });
+
+/* --- 注意事項ポップアップ制御 --- */
+function showModal() { document.getElementById('infoModal').style.display = 'flex'; }
+function agreeAndClose() { 
+    document.getElementById('infoModal').style.display = 'none'; 
+    localStorage.setItem('honkoku_agreed', 'true'); // 同意したことを記録
+}
+
+/* --- フォントサイズ変更 --- */
+function changeFontSize(delta) {
+    currentFontSize += delta;
+    if (currentFontSize < 8) currentFontSize = 8;
+    if (currentFontSize > 72) currentFontSize = 72;
+    mainEditor.style.fontSize = currentFontSize + "px";
+    localStorage.setItem("honkoku_fontsize", currentFontSize);
+}
 
 /* --- リサイズロジック --- */
 let activeResizer = null;
@@ -193,13 +243,7 @@ document.addEventListener("mousemove", (e) => {
         if (percentage > 10 && percentage < 90) mainArea.style.width = percentage + "%";
     }
 });
-document.addEventListener("mouseup", () => {
-    if (activeResizer) {
-        activeResizer = null;
-        document.body.style.cursor = '';
-        // ★リサイズ時にgoHomeせず、現在の拡大表示を維持
-    }
-});
+document.addEventListener("mouseup", () => { activeResizer = null; document.body.style.cursor = ''; });
 
 /* --- ガイド線ドラッグ --- */
 let isDraggingGuide = false;
@@ -213,7 +257,37 @@ document.addEventListener("mousemove", (e) => {
 });
 document.addEventListener("mouseup", () => { if (isDraggingGuide) { isDraggingGuide = false; document.body.style.userSelect = ''; document.body.style.cursor = ''; } });
 
-/* --- 機能系 --- */
+/* --- セッション管理と初期起動 --- */
+function autoSave() {
+    localStorage.setItem("honkoku_texts", JSON.stringify(texts));
+    localStorage.setItem("honkoku_notes", JSON.stringify(notesData));
+    localStorage.setItem("honkoku_page", currentPage);
+}
+function autoLoad() {
+    texts = JSON.parse(localStorage.getItem("honkoku_texts")) || [];
+    notesData = JSON.parse(localStorage.getItem("honkoku_notes")) || [];
+    currentPage = parseInt(localStorage.getItem("honkoku_page")) || 0;
+    currentFontSize = parseInt(localStorage.getItem("honkoku_fontsize")) || 15;
+    mainEditor.style.fontSize = currentFontSize + "px";
+    
+    // 初回アクセスかどうかのチェック
+    if (!localStorage.getItem('honkoku_agreed')) {
+        showModal(); // 同意記録がなければポップアップを出す
+    }
+
+    updatePageInfo(); loadPage();
+}
+function resetData() {
+    if (confirm("全てのページ内容とメモを完全に消去して初期化しますか？")) {
+        texts = []; notesData = []; currentPage = 0;
+        localStorage.removeItem("honkoku_texts"); localStorage.removeItem("honkoku_notes"); localStorage.removeItem("honkoku_page");
+        mainEditor.innerHTML = ""; notesEditor.innerHTML = ""; images = []; viewer.close();
+        updatePageInfo(); alert("リセット完了");
+    }
+}
+window.addEventListener('DOMContentLoaded', autoLoad);
+
+/* --- 各種機能（フィルタ・読込等） --- */
 function applyFilters() {
     const canvases = document.querySelectorAll('#viewer canvas');
     let s = "";
@@ -227,26 +301,6 @@ function rotate(d) { viewer.viewport.setRotation(viewer.viewport.getRotation() +
 function toggleGuide() { guideLine.style.display = (guideLine.style.display === "none" || guideLine.style.display === "") ? "block" : "none"; }
 function execCmd(cmd, val=null) { document.execCommand(cmd, false, val); save(); }
 function setColor(c) { execCmd("foreColor", c); }
-function autoSave() {
-    localStorage.setItem("honkoku_texts", JSON.stringify(texts));
-    localStorage.setItem("honkoku_notes", JSON.stringify(notesData));
-    localStorage.setItem("honkoku_page", currentPage);
-}
-function autoLoad() {
-    texts = JSON.parse(localStorage.getItem("honkoku_texts")) || [];
-    notesData = JSON.parse(localStorage.getItem("honkoku_notes")) || [];
-    currentPage = parseInt(localStorage.getItem("honkoku_page")) || 0;
-    updatePageInfo(); loadPage();
-}
-function resetData() {
-    if (confirm("全てのページ内容とメモを完全に消去しますか？")) {
-        texts = []; notesData = []; currentPage = 0;
-        localStorage.removeItem("honkoku_texts"); localStorage.removeItem("honkoku_notes"); localStorage.removeItem("honkoku_page");
-        mainEditor.innerHTML = ""; notesEditor.innerHTML = ""; images = []; viewer.close();
-        updatePageInfo(); alert("リセット完了");
-    }
-}
-window.addEventListener('DOMContentLoaded', autoLoad);
 
 document.getElementById("imgLoader").addEventListener("change", function(e) { images = Array.from(e.target.files); initPages(); });
 async function loadManifest() {
@@ -297,6 +351,7 @@ mainEditor.addEventListener("input", save); notesEditor.addEventListener("input"
 function prevPage() { if (currentPage > 0) { save(); currentPage--; loadPage(); } }
 function nextPage() { if (currentPage < Math.max(images.length, texts.length) - 1) { save(); currentPage++; loadPage(); } }
 
+/* --- 挿入・カーソル記憶 --- */
 function savePosition() {
     const sel = window.getSelection();
     if (sel.rangeCount > 0) {
@@ -333,5 +388,4 @@ document.getElementById("sessionLoader").addEventListener("change", function(e) 
 });
 </script>
 </body>
-
 </html>
