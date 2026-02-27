@@ -51,7 +51,7 @@ button:hover { background: #e9ecef; }
 .control-group { 
   display: flex; gap: 4px; align-items: center; border-right: 1px solid #ddd; padding-right: 8px; 
 }
-.control-group:nth-child(3) { margin-left: auto; } /* ←3つ目のグループから右寄せにする */
+.control-group:nth-child(3) { margin-left: auto; }
 .control-group:last-child { border-right: none; padding-right: 0; }
 
 #manifestUrl { font-size: 11px; padding: 2px 4px; width: 150px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; height: 22px; }
@@ -64,6 +64,33 @@ button:hover { background: #e9ecef; }
 /* カラーパレットボタン */
 .color-btn { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ddd; padding: 0 !important; cursor: pointer; display: inline-block; }
 .color-btn:hover { transform: scale(1.1); }
+
+/* =========================================
+   メニュー開閉用 フローティングボタン
+========================================= */
+#menuToggleBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 45px;
+  height: 45px;
+  background-color: var(--accent-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 1000;
+  transition: transform 0.2s, background-color 0.2s;
+  border: none;
+}
+#menuToggleBtn:hover, #menuToggleBtn:active {
+  transform: scale(1.1);
+  background-color: #132242;
+}
 
 /* =========================================
    ワークスペース（ビューアとエディタの領域）
@@ -85,7 +112,6 @@ button:hover { background: #e9ecef; }
 }
 .resizer:hover, .resizer:active { width: var(--resizer-hover-width); background: var(--accent-color); }
 
-/* ▼ 見えない当たり判定を左右に15pxずつ広げる ▼ */
 .resizer::after { 
   content: ""; 
   position: absolute; 
@@ -146,7 +172,6 @@ button:hover { background: #e9ecef; }
   white-space: pre-wrap; word-break: break-all;
 }
 
-
 /* メモ（横書き）エディタ */
 #notesEditor { 
   writing-mode: horizontal-tb; width: 100%; height: auto; min-height: 100%; 
@@ -155,7 +180,6 @@ button:hover { background: #e9ecef; }
   background: var(--notes-bg); border: none; border-radius: 4px; color: #555; outline: none; box-sizing: border-box;
 }
 
-/* プレースホルダーの表示設定 */
 #notesEditor:empty::before {
   content: attr(placeholder);
   color: #aaa;
@@ -180,35 +204,14 @@ button:hover { background: #e9ecef; }
   box-sizing: border-box;
 }
 
-
-.modal-scroll-area {
-  overflow-y: auto;
-  flex: 1;
-  padding-right: 15px;
-  margin-bottom: 10px;
-}
-
+.modal-scroll-area { overflow-y: auto; flex: 1; padding-right: 15px; margin-bottom: 10px; }
 .modal-content h2 { margin-top: 0; font-size: 18px; border-bottom: 2px solid #eee; padding-bottom: 10px; color: var(--accent-color); text-align: center; flex-shrink: 0; }
 .modal-content h3 { font-size: 15px; font-weight: bold; margin: 15px 0 5px; color: #333; } 
 .modal-content p { margin: 0 0 10px; }
-
-.modal-close-btn {
-  display: block; width: 100%; margin: 10px auto 0; padding: 10px; font-size: 15px; font-weight: bold;
-  background: var(--accent-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;
-  flex-shrink: 0;
-}
+.modal-close-btn { display: block; width: 100%; margin: 10px auto 0; padding: 10px; font-size: 15px; font-weight: bold; background: var(--accent-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
 .modal-close-btn:hover { background: #132242; }
-
-/* ▼ 箇条書きの余白を詰める ▼ */
-.modal-content ul {
-  padding-left: 20px;
-  margin-top: 5px;
-  margin-bottom: 15px;
-}
-.modal-content li {
-  margin-bottom: 6px;
-}
-
+.modal-content ul { padding-left: 20px; margin-top: 5px; margin-bottom: 15px; }
+.modal-content li { margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -292,11 +295,9 @@ button:hover { background: #e9ecef; }
 <div id="infoModal" class="modal-overlay">
   <div class="modal-content">
     <h2>🐈 Mujineko-Honkoku Tool<br><span style="font-size:12px; font-weight:normal; color:#666;">ご利用にあたっての注意事項</span></h2>
-    
     <div class="modal-scroll-area">
       <p>※本ツールは素人がてきとうに作ったものです。シンプルに動くかわりに最低限の機能しかありません。ほどほどにてきとうにご活用いただければ幸いです。</p>
       <p>※スマホやタブレットをご使用の場合は<a href="https://cbcb1728-na.github.io/mujicat-simpleviewerop/" target="_blank" rel="noopener noreferrer">こちらがおすすめです</a>。</p>
-      
       <h3>🦐 つかいかた 🦐</h3>
       <ul>
         <li style="margin-bottom: 10px;">
@@ -304,16 +305,16 @@ button:hover { background: #e9ecef; }
           <span style="font-size: 0.9em; color: #666; display: inline-block; margin-top: 4px;">※本ツールに読み込んだ画像や入力テキストは、すべてお使いのブラウザ内でのみ処理されます。外部サーバーへ送信されることはありませんので、未公開資料でも安心してご利用いただけます。</span>
         </li>
         <li><strong>ページめくり：</strong> 画面上のボタン、またはキーボードの矢印キーで操作できます。※ページ送りの方向は縦書きの資料を想定しています。</li>
+        <li><strong>画像ビューワ：</strong> 画面左部に読みこんだ史料を写します。左端のボタンからコントラストを調整したり、赤線をひっぱったりできます。</li>
         <li><strong>翻刻作業：</strong> 画面右部で翻刻作業をおこなえます。縦書きエディタでの入力がうまくいかない場合、上部のエディタから横書きで入力ののち、shift＋Enterで縦書きにできます。</li>
         <li><strong>メモ：</strong> 縦書きエディタ右にあるのはメモ欄です。備考や注釈に使えます。</li>
         <li><strong>作業保存：</strong> メモや手書きのデータはブラウザに自動保存されます。トップメニューの「💾 作業保存」でjsonファイルとしてダウンロードし、後で「📂 再開」からファイルを読み込めば作業を再開できます。</li>
       </ul>
-        
       <h3>⚠️ 注意 ⚠️</h3>
       <ul>
         <li>ブラウザの履歴を消去すると、自動保存されたデータも消えてしまいます。大切なデータはこまめに「💾 作業保存」からDLしてください。</li>
         <li>本ツールの利用により生じたデータ消失等の損害について、製作者は責任を負いません。また、IIIFから読み込んだ史料の二次利用については、各所蔵機関の利用規約に必ず従ってください。</li>
-        <li>（無いと思いますが…）本ツールのコードの無断複製・改変・自作発言・販売を禁じます。</li>
+        <li>（無いと思いますが…）本ツールのコードの無断複製・改変・自作発言・販売を禁じます。ツールURLの共有はどんどんしてもらって大丈夫です。</li>
       </ul> 
     </div>
     <button class="modal-close-btn" onclick="agreeAndClose()">はじめる</button>
@@ -370,21 +371,20 @@ function setFontSize(size) {
 /* --- リサイズロジック --- */
 let activeResizer = null;
 
-// ▼ 掴んだ瞬間に、ビューワや文字が反応しないようにバリアを張る ▼
-document.getElementById("resizerMain").addEventListener("mousedown", () => { 
+document.getElementById("resizerMain").addEventListener("pointerdown", () => { 
     activeResizer = "main"; 
     document.body.style.cursor = 'col-resize'; 
-    document.body.style.userSelect = 'none'; // 文字選択を防止
-    viewerContainer.style.pointerEvents = 'none'; // ビューワのボタン誤爆を防止
+    document.body.style.userSelect = 'none'; 
+    viewerContainer.style.pointerEvents = 'none'; 
 });
-document.getElementById("resizerEditor").addEventListener("mousedown", () => { 
+document.getElementById("resizerEditor").addEventListener("pointerdown", () => { 
     activeResizer = "editor"; 
     document.body.style.cursor = 'col-resize'; 
     document.body.style.userSelect = 'none'; 
     viewerContainer.style.pointerEvents = 'none'; 
 });
 
-document.addEventListener("mousemove", (e) => {
+document.addEventListener("pointermove", (e) => {
     if (!activeResizer) return;
     if (activeResizer === "main") {
         let percentage = (e.clientX / window.innerWidth) * 100;
@@ -397,12 +397,11 @@ document.addEventListener("mousemove", (e) => {
     }
 });
 
-// ▼ 離した瞬間にバリアを解除する ▼
-document.addEventListener("mouseup", () => { 
+document.addEventListener("pointerup", () => { 
     activeResizer = null; 
     document.body.style.cursor = ''; 
     document.body.style.userSelect = ''; 
-    viewerContainer.style.pointerEvents = ''; // ビューワの操作を元に戻す
+    viewerContainer.style.pointerEvents = ''; 
 });
 
 /* --- ガイド線ドラッグ --- */
@@ -514,6 +513,19 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'ArrowRight') { e.preventDefault(); prevPage(); }
 }, true);
 
+/* --- トップメニューの開閉 --- */
+function toggleMenu() {
+    const menu = document.getElementById("topMenu");
+    const toggleBtn = document.getElementById("menuToggleBtn");
+    if (menu.style.display === "none") {
+        menu.style.display = "flex";
+        toggleBtn.innerText = "▲";
+    } else {
+        menu.style.display = "none";
+        toggleBtn.innerText = "▼";
+    }
+}
+
 /* --- 挿入・カーソル記憶 --- */
 function savePosition() {
     const sel = window.getSelection();
@@ -568,5 +580,8 @@ document.getElementById("sessionLoader").addEventListener("change", function(e) 
     e.target.value = "";
 });
 </script>
+
+<button id="menuToggleBtn" onclick="toggleMenu()" title="メニューを開閉">▲</button>
+
 </body>
 </html>
