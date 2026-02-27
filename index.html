@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html><!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -9,192 +9,306 @@
 
 <style>
 /* =========================================
-   基本レイアウト
+   基本レイアウトと和風カラースキーム
 ========================================= */
 :root {
-  --control-bg: #f0f0f0;
-  --border-color: #ccc;
-  --viewer-bg: #222;
-  --notes-bg: #fafafa;
-  --resizer-width: 6px;
+  --control-bg: #f8f9fa;       
+  --border-color: #dcdcdc;     
+  --viewer-bg: #1a1a1a;        
+  --editor-bg: #ffffff;        
+  --notes-bg: #fffdf7;        
+  --accent-color: #1c305c;     
+  --text-main: #333333;        
+  --resizer-width: 1px;        
+  --resizer-hover-width: 4px;  
 }
 
 body {
-  margin: 0; height: 100vh; display: flex; overflow: hidden;
+  margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
   font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-  font-size: 14px;
+  font-size: 14px; color: var(--text-main);
+  background-color: var(--control-bg);
 }
 
-button { cursor: pointer; }
+button { 
+  cursor: pointer; border: 1px solid #ccc; background: #fff; 
+  border-radius: 4px; padding: 2px 6px; font-size: 11px; transition: 0.2s; 
+}
+button:hover { background: #e9ecef; }
+.btn-primary { background: var(--accent-color); color: #fff; border-color: var(--accent-color); font-weight: bold; }
+.btn-primary:hover { background: #132242; }
+
+/* =========================================
+   トップメニュー（コンパクト化）
+========================================= */
+#topMenu { 
+  width: 100%; padding: 4px 8px; background: #ffffff; 
+  border-bottom: 1px solid var(--border-color); 
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; 
+  box-sizing: border-box; z-index: 300;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.control-group { 
+  display: flex; gap: 4px; align-items: center; border-right: 1px solid #ddd; padding-right: 8px; 
+}
+.control-group:nth-child(3) { margin-left: auto; } /* ←3つ目のグループから右寄せにする */
+.control-group:last-child { border-right: none; padding-right: 0; }
+
+#manifestUrl { font-size: 11px; padding: 2px 4px; width: 150px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; height: 22px; }
+#pageSelect { font-size: 11px; padding: 0 2px; border: 1px solid #ccc; border-radius: 4px; height: 22px; min-width: 70px; }
+#topMenu button { height: 22px; display: inline-flex; align-items: center; justify-content: center; }
+
+.file-upload-btn { position: relative; overflow: hidden; display: inline-block; cursor: pointer; }
+.file-upload-btn input[type=file] { position: absolute; font-size: 100px; right: 0; top: 0; opacity: 0; cursor: pointer; }
+
+/* カラーパレットボタン */
+.color-btn { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ddd; padding: 0 !important; cursor: pointer; display: inline-block; }
+.color-btn:hover { transform: scale(1.1); }
+
+/* =========================================
+   ワークスペース（ビューアとエディタの領域）
+========================================= */
+#workspace {
+  display: flex; flex: 1; width: 100%; overflow: hidden;
+}
 
 #viewerContainer { width: 50%; height: 100%; position: relative; background: var(--viewer-bg); flex-shrink: 0; }
-#rightContainer { flex: 1; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+#rightContainer { flex: 1; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
 
+/* =========================================
+   リサイザー（ステルス＆ホバー拡張）
+========================================= */
 .resizer {
-  width: var(--resizer-width);
-  height: 100%;
-  background: #e0e0e0;
-  cursor: col-resize;
-  flex-shrink: 0;
-  z-index: 200;
-  transition: background 0.2s;
+  width: var(--resizer-width); height: 100%; background: var(--border-color);
+  cursor: col-resize; flex-shrink: 0; z-index: 200; position: relative;
+  transition: width 0.1s, background 0.2s;
 }
-.resizer:hover { background: #bbb; }
+.resizer:hover, .resizer:active { width: var(--resizer-hover-width); background: var(--accent-color); }
+.resizer::after { content: ""; position: absolute; top: 0; left: -4px; right: -4px; bottom: 0; }
 
+/* =========================================
+   ビューア部分のコントロール
+========================================= */
 #viewer { width: 100%; height: 100%; }
 
 #guideLine {
-  position: absolute; top: 0; left: 80%; height: 100%; width: 20px;
-  background: linear-gradient(to right, transparent 9px, rgba(255, 50, 50, 0.6) 9px, rgba(255, 50, 50, 0.6) 11px, transparent 11px);
-  z-index: 100; display: none; cursor: col-resize;
-  user-select: none; -webkit-user-select: none;
+  position: absolute; top: 0; left: 80%; height: 100%; width: 2px;
+  background: rgba(220, 53, 69, 0.8); z-index: 100; display: none; cursor: col-resize;
 }
+#guideLine::before { content: ""; position: absolute; top: 0; left: -10px; right: -10px; bottom: 0; }
 
 #viewerControls {
   position: absolute; top: 50%; left: 10px; transform: translateY(-50%); z-index: 110;
-  display: flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.7);
-  padding: 4px; border-radius: 6px; backdrop-filter: blur(4px);
-  user-select: none;
+  display: flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.85);
+  padding: 4px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
-#viewerControls button { font-size: 11px; padding: 0; width: 26px; height: 26px; line-height: 26px; background: #fff; border: 1px solid #999; border-radius: 4px; font-weight: bold; color: #333; text-align: center; }
-.v-separator { height: 1px; background: #999; margin: 2px 2px; }
+#viewerControls button { font-size: 11px; padding: 0; width: 26px; height: 26px; border: 1px solid #aaa; font-weight: bold; color: #333; border-radius: 4px; }
+.v-separator { height: 1px; background: #aaa; margin: 2px 0; width: 100%; }
 
-#controls { padding: 2px 4px; background: var(--control-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 2px; align-items: center; min-height: 24px; }
-.control-group { display: inline-flex; gap: 1px; padding-right: 4px; margin-right: 1px; border-right: 1px solid #ddd; align-items: center; }
-#controls button { font-size: 10px; padding: 0 4px; height: 20px; line-height: 18px; }
-#controls input[type=file] { font-size: 10px; padding: 1px; width: 90px; height: 20px; }
-#manifestUrl { font-size: 10px; padding: 1px 2px; width: 80px; border:1px solid #ccc; height: 16px; }
-#pageSelect { font-size: 10px; height: 20px; border: 1px solid #ccc; background: #fff; }
-
-#inputAreaWrapper { flex: none; height: 45px; border-bottom: 1px solid var(--border-color); padding: 2px; background: #f9f9f9; display: flex; flex-direction: column; position: relative; }
-#horizontalInput { flex: 1; width: 100%; resize: none; border: 1px solid #ddd; padding: 2px 4px; font-family: inherit; overflow-y: auto; box-sizing: border-box; font-size: 14px; line-height: 1.4; }
-.footer-link { position: absolute; bottom: 2px; right: 5px; font-size: 10px; color: #999; text-decoration: none; cursor: pointer; }
-.footer-link:hover { color: #666; text-decoration: underline; }
+/* =========================================
+   入力＆エディタエリア
+========================================= */
+#inputAreaWrapper { 
+  flex: none; height: 45px; border-bottom: 1px solid var(--border-color); padding: 2px; 
+  background: #f9f9f9; display: flex; flex-direction: column; position: relative;
+}
+#horizontalInput { 
+  flex: 1; width: 100%; resize: none; border: 1px solid #ddd; padding: 2px 4px; 
+  font-family: inherit; overflow-y: auto; box-sizing: border-box; 
+  font-size: 14px; line-height: 1.4; outline: none; border-radius: 0;
+}
+#horizontalInput:focus { border-color: var(--accent-color); }
 
 #editorRow { flex: 1; display: flex; min-height: 0; overflow: hidden; }
-#mainArea { width: 75%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
-#notesArea { flex: 1; background: var(--notes-bg); display: flex; flex-direction: column; overflow: hidden; }
+#mainArea { width: 70%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--editor-bg); }
+#notesArea { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--notes-bg); }
 
-.scrollWindow { flex: 1; width: 100%; position: relative; background: #fff; }
+.scrollWindow { flex: 1; width: 100%; position: relative; }
 #mainArea .scrollWindow { overflow-x: auto; overflow-y: hidden; }
-#notesArea .scrollWindow { overflow-x: hidden; overflow-y: auto; }
+#notesArea .scrollWindow { overflow-x: hidden; overflow-y: auto; box-sizing: border-box; }
 
 /* 縦書きエディタ */
 .editor {
   display: block; box-sizing: border-box; height: 100%; width: max-content;
-  padding: 15px 30px; outline: none; writing-mode: vertical-rl; text-orientation: upright;
-  font-family: "Hiragino Mincho ProN", serif; font-size: 15.0px; line-height: 1.9; 
+  padding: 20px 40px; outline: none; writing-mode: vertical-rl; text-orientation: upright;
+  font-family: serif; font-size: 11pt; line-height: 2.0; 
+  color: #000000;
   white-space: pre-wrap; word-break: break-all;
 }
 
+
+/* メモ（横書き）エディタ */
 #notesEditor { 
   writing-mode: horizontal-tb; width: 100%; height: auto; min-height: 100%; 
-  padding: 10px; font-family: sans-serif; font-size: 11px; line-height: 1.4; 
-  background: var(--notes-bg); color: #555; 
+  padding: 8px; 
+  font-family: sans-serif; font-size: 11px; line-height: 1.6; 
+  background: var(--notes-bg); border: none; border-radius: 4px; color: #555; outline: none; box-sizing: border-box;
 }
 
-/* ★注意事項ポップアップ（スプラッシュ画面） */
+/* プレースホルダーの表示設定 */
+#notesEditor:empty::before {
+  content: attr(placeholder);
+  color: #aaa;
+  pointer-events: none;
+  display: block;
+}
+
+/* =========================================
+   注意事項ポップアップ
+========================================= */
 .modal-overlay {
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+  background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+  padding: 20px; box-sizing: border-box;
 }
-/* 文字サイズを全体的に小さく調整 */
 .modal-content {
-  background: #fff; padding: 25px 35px; border-radius: 8px; max-width: 550px; width: 90%;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3); line-height: 1.6; font-size: 12px; color: #333;
+  background: #fff; padding: 25px 35px; border-radius: 8px; 
+  max-width: 650px; width: 100%; 
+  max-height: 85vh; 
+  display: flex; flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2); line-height: 1.6; font-size: 13px; color: #444;
+  box-sizing: border-box;
 }
-.modal-content h2 { margin-top: 0; font-size: 16px; border-bottom: 2px solid #ddd; padding-bottom: 8px; color: #111; text-align: center; }
-.modal-content h3 { font-size: 13px; margin: 15px 0 5px; color: #c00; }
+
+
+.modal-scroll-area {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 15px;
+  margin-bottom: 10px;
+}
+
+.modal-content h2 { margin-top: 0; font-size: 18px; border-bottom: 2px solid #eee; padding-bottom: 10px; color: var(--accent-color); text-align: center; flex-shrink: 0; }
+.modal-content h3 { font-size: 15px; font-weight: bold; margin: 15px 0 5px; color: #333; } 
 .modal-content p { margin: 0 0 10px; }
+
 .modal-close-btn {
-  display: block; margin: 25px auto 0; padding: 10px 30px; font-size: 14px; font-weight: bold;
-  background: #0056b3; color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;
+  display: block; width: 100%; margin: 10px auto 0; padding: 10px; font-size: 15px; font-weight: bold;
+  background: var(--accent-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;
+  flex-shrink: 0;
 }
-.modal-close-btn:hover { background: #004494; }
+.modal-close-btn:hover { background: #132242; }
+
 </style>
 </head>
 <body>
 
-<div id="viewerContainer">
-  <div id="viewer"></div>
-  <div id="guideLine"></div>
-  <div id="viewerControls">
-    <button onclick="toggleFilter('contrast')">濃</button>
-    <button onclick="toggleFilter('invert')">転</button>
-    <button onclick="resetFilters()">解</button>
-    <div class="v-separator"></div>
-    <button onclick="toggleGuide()">線</button>
-    <div class="v-separator"></div>
-    <button onclick="rotate(-90)">↶</button>
-    <button onclick="rotate(90)">↷</button>
+<div id="topMenu">
+  <div class="control-group">
+    <button onclick="showModal()" title="使い方・注意事項" style="font-size: 12px; padding: 2px 4px;">🔰</button>
+    <label class="file-upload-btn">
+      <button style="pointer-events: none;">📁 ローカルから読込</button>
+      <input type="file" id="imgLoader" multiple accept="image/*">
+    </label>
+    <input type="text" id="manifestUrl" placeholder="IIIF URL">
+    <button onclick="loadManifest()" class="btn-primary" title="IIIF読込">🌐 読込</button>
+  </div>
+
+  <div class="control-group">
+    <button onclick="nextPage()" title="次へ(左へ)">◀</button>
+    <select id="pageSelect" onchange="jumpPage(this.value)"></select>
+    <button onclick="prevPage()" title="前へ(右へ)">▶</button>
+  </div>
+
+  <div class="control-group">
+    <button onclick="execCmd('undo')" title="元に戻す">戻</button>
+    <button onclick="execCmd('redo')" title="やり直し">進</button>
+    <span style="margin: 0 2px; color: #ccc;">|</span>
+    <button onclick="setColor('black')" class="color-btn" style="background:#333;" title="黒"></button>
+    <button onclick="setColor('#1976d2')" class="color-btn" style="background:#1976d2;" title="青"></button>
+    <button onclick="setColor('#d32f2f')" class="color-btn" style="background:#d32f2f;" title="赤"></button>
+    <span style="margin: 0 2px; color: #ccc;">|</span>
+    <button onclick="changeFontSize(1)" title="文字を大きく">A+</button>
+    <button onclick="setFontSize(10.5)" title="10.5にする">10.5</button>
+    <button onclick="changeFontSize(-1)" title="文字を小さく">A-</button>
+  </div>
+
+  <div class="control-group">
+    <button onclick="copyCurrentPage()" title="現在のページをコピー">📄 頁写</button>
+    <button onclick="copyAll()" title="全てのページをコピー">📑 全写</button>
+    <span style="margin: 0 2px; color: #ccc;">|</span>
+    <button onclick="exportSession()" style="font-weight:bold; color:#006600; background:#e6ffe6; border-color:#b3ffb3;">💾 作業保存</button>
+    <button onclick="document.getElementById('sessionLoader').click()">📂 再開</button>
+    <input type="file" id="sessionLoader" style="display:none" accept=".json">
+    <button onclick="resetData()" style="color: #d32f2f; border-color: #fcc; background: #fff;">🗑️ 全消去</button>
   </div>
 </div>
 
-<div id="resizerMain" class="resizer"></div>
-
-<div id="rightContainer">
-  <div id="controls">
-    <span class="control-group"><input type="file" id="imgLoader" multiple></span>
-    <span class="control-group"><input type="text" id="manifestUrl" placeholder="IIIF URL"><button onclick="loadManifest()">読込</button></span>
-    <span class="control-group">
-        <button onclick="nextPage()">←</button>
-        <select id="pageSelect" onchange="jumpPage(this.value)"></select>
-        <button onclick="prevPage()">→</button>
-    </span>
-    <span class="control-group">
-        <button onclick="execCmd('undo')">戻</button><button onclick="execCmd('redo')">取消</button>
-        <button onclick="setColor('black')" style="color:black; font-weight:bold;">黒</button>
-        <button onclick="setColor('blue')" style="color:blue; font-weight:bold;">青</button>
-        <button onclick="setColor('red')" style="color:red; font-weight:bold;">赤</button>
-    </span>
-    <span class="control-group">
-        <button onclick="copyCurrentPage()">頁写</button><button onclick="copyAll()">全写</button>
-        <button onclick="exportSession()">保存</button>
-        <button onclick="document.getElementById('sessionLoader').click()">読込</button>
-        <input type="file" id="sessionLoader" style="display:none">
-        <button onclick="resetData()" style="background:#fee; color:#c00; border-color:#fcc;">全消去</button>
-    </span>
-  </div>
-
-  <div id="inputAreaWrapper">
-    <textarea id="horizontalInput" placeholder="入力して Shift+Enter"></textarea>
-    <a class="footer-link" onclick="showModal()">ⓘ 注意事項！</a>
-  </div>
-
-  <div id="editorRow">
-    <div id="mainArea">
-      <div class="scrollWindow"><div id="mainEditor" class="editor" contenteditable="true"></div></div>
+<div id="workspace">
+  <div id="viewerContainer">
+    <div id="viewer"></div>
+    <div id="guideLine"></div>
+    <div id="viewerControls">
+      <button onclick="toggleGuide()" title="読書用ガイド線">線</button>
+      <div class="v-separator"></div>
+      <button onclick="toggleFilter('contrast')" title="コントラスト強調">濃</button>
+      <button onclick="toggleFilter('invert')" title="白黒反転">転</button>
+      <button onclick="resetFilters()" title="リセット">解</button>
+      <div class="v-separator"></div>
+      <button onclick="rotate(-90)" title="左回転">↶</button>
+      <button onclick="rotate(90)" title="右回転">↷</button>
     </div>
-    <div id="resizerEditor" class="resizer"></div>
-    <div id="notesArea">
-      <div class="scrollWindow"><div id="notesEditor" class="editor" contenteditable="true"></div></div>
+  </div>
+
+  <div id="resizerMain" class="resizer"></div>
+
+  <div id="rightContainer">
+    <div id="inputAreaWrapper">
+      <textarea id="horizontalInput" placeholder="入力して Shift+Enter"></textarea>
+    </div>
+
+    <div id="editorRow">
+      <div id="mainArea">
+        <div class="scrollWindow"><div id="mainEditor" class="editor" contenteditable="true"></div></div>
+      </div>
+      <div id="resizerEditor" class="resizer"></div>
+      <div id="notesArea">
+        <div class="scrollWindow"><div id="notesEditor" placeholder="備考スペース（ページごとのメモが書きこめます）" contenteditable="true"></div></div>
+      </div>
     </div>
   </div>
 </div>
 
 <div id="infoModal" class="modal-overlay">
   <div class="modal-content">
-    <h2>🐈 Mujineko-Honkoku Tool<br><span style="font-size:12px; font-weight:normal;">ご利用にあたっての注意事項</span></h2>
-    <p>※本ツールは素人がてきとうに作ったものです。シンプルに動くかわりに最低限の機能しかありません。どうかほどほどに、てきとうにご活用いただければ幸いです。</p>
-
-    <h3>1. プライバシーとセキュリティ</h3>
-    <p>本ツールに読み込んだ画像や入力テキストは、すべてお使いのブラウザ内でのみ処理されます。外部サーバーへ送信されることはありませんので、未公開資料でも安心してご利用いただけます。</p>
+    <h2>🐈 Mujineko-Honkoku Tool<br><span style="font-size:12px; font-weight:normal; color:#666;">ご利用にあたっての注意事項</span></h2>
     
-    <h3>2. データのこまめな保存</h3>
-    <p>入力内容はブラウザに一時保存されますが、履歴消去等で消える可能性があります。作業の区切りには必ず上部の「保存」ボタンを押し、バックアップファイル（.json）をお手元に残してください。（「読込」から.jsonファイルを読み込むことで、中断した作業を再開できます。）</p>
-
-    <h3>3. 免責・禁止事項</h3>
-    <p>本ツールの利用により生じたデータ消失等の損害について、開発者は責任を負いません。また、（無いと思いますが…）<strong>本ツールのコードの無断複製・改変・自作発言・販売は固く禁じます。</strong>他の方へ紹介される際は、本ツールの公開URLをそのまま共有してください。</p>
-    
+    <div class="modal-scroll-area">
+      <p>※本ツールは素人がてきとうに作ったものです。シンプルに動くかわりに最低限の機能しかありません。ほどほどにてきとうにご活用いただければ幸いです。</p>
+      <p>※スマホやタブレットをご使用の場合は<a href="https://cbcb1728-na.github.io/mujicat-simpleviewerop/" target="_blank" rel="noopener noreferrer">こちらがおすすめです</a>。</p>
+      
+      <h3>🦐 つかいかた 🦐</h3>
+      <ul>
+        <li style="margin-bottom: 10px;">
+          <strong>史料の読込：</strong> お手元の画像ファイルや、IIIFマニフェストURLから読み込めます。<br>
+          <span style="font-size: 0.9em; color: #666; display: inline-block; margin-top: 4px;">※本ツールに読み込んだ画像や入力テキストは、すべてお使いのブラウザ内でのみ処理されます。外部サーバーへ送信されることはありませんので、未公開資料でも安心してご利用いただけます。</span>
+        </li>
+        <li><strong>ページめくり：</strong> 画面上のボタン、またはキーボードの矢印キーで操作できます。※ページ送りの方向は縦書きの資料を想定しています。</li>
+        <li><strong>翻刻作業：</strong> 画面右部で翻刻作業をおこなえます。縦書きエディタでの入力がうまくいかない場合、上部のエディタから横書きで入力ののち、shift＋Enterで縦書きにできます。</li>
+        <li><strong>メモ：</strong> 縦書きエディタ右にあるのはメモ欄です。備考や注釈に使えます。</li>
+        <li><strong>作業保存：</strong> メモや手書きのデータはブラウザに自動保存されます。トップメニューの「💾 作業保存」でjsonファイルとしてダウンロードし、後で「📂 再開」からファイルを読み込めば作業を再開できます。</li>
+      </ul>
+        
+      <h3>⚠️ 注意 ⚠️</h3>
+      <ul>
+        <li>ブラウザの履歴を消去すると、自動保存されたデータも消えてしまいます。大切なデータはこまめに「💾 作業保存」からDLしてください。</li>
+        <li>本ツールの利用により生じたデータ消失等の損害について、製作者は責任を負いません。また、IIIFから読み込んだ史料の二次利用については、各所蔵機関の利用規約に必ず従ってください。</li>
+        <li>（無いと思いますが…）本ツールのコードの無断複製・改変・自作発言・販売を禁じます。</li>
+      </ul> 
+    </div>
     <button class="modal-close-btn" onclick="agreeAndClose()">はじめる</button>
-
-    <p style="text-align: center; margin-top: 20px; font-size: 11px; color: #666;">created by Kitano（X：@cbcb1728）</p>
+    <div style="text-align: right; margin-top: 15px; font-size: 11px; color: #888; flex-shrink: 0;">
+      created by Kitano（X：@cbcb1728 ／ <a href="https://wavebox.me/wave/8k6jf713djq1xulp/" target="_blank" rel="noopener noreferrer">Wavebox</a>）
+    </div>
   </div>
 </div>
 
 <script>
+// ==========================================
+// 変数と初期化
+// ==========================================
 let images = [], texts = [], notesData = [], currentPage = 0;
-let currentFontSize = 15;
+let currentFontSize = 11;
 let filterState = { contrast: false, invert: false };
 const mainEditor = document.getElementById("mainEditor");
 const notesEditor = document.getElementById("notesEditor");
@@ -216,15 +330,20 @@ const viewer = OpenSeadragon({
 function showModal() { document.getElementById('infoModal').style.display = 'flex'; }
 function agreeAndClose() { 
     document.getElementById('infoModal').style.display = 'none'; 
-    localStorage.setItem('honkoku_agreed', 'true'); // 同意したことを記録
+    localStorage.setItem('honkoku_agreed', 'true'); 
 }
 
 /* --- フォントサイズ変更 --- */
 function changeFontSize(delta) {
     currentFontSize += delta;
-    if (currentFontSize < 8) currentFontSize = 8;
-    if (currentFontSize > 72) currentFontSize = 72;
-    mainEditor.style.fontSize = currentFontSize + "px";
+    if (currentFontSize < 5) currentFontSize = 5; 
+    if (currentFontSize > 50) currentFontSize = 50;
+    mainEditor.style.fontSize = currentFontSize + "pt";
+    localStorage.setItem("honkoku_fontsize", currentFontSize);
+}
+function setFontSize(size) {
+    currentFontSize = size;
+    mainEditor.style.fontSize = currentFontSize + "pt";
     localStorage.setItem("honkoku_fontsize", currentFontSize);
 }
 
@@ -269,22 +388,18 @@ function autoLoad() {
     texts = JSON.parse(localStorage.getItem("honkoku_texts")) || [];
     notesData = JSON.parse(localStorage.getItem("honkoku_notes")) || [];
     currentPage = parseInt(localStorage.getItem("honkoku_page")) || 0;
-    currentFontSize = parseInt(localStorage.getItem("honkoku_fontsize")) || 15;
-    mainEditor.style.fontSize = currentFontSize + "px";
+    currentFontSize = parseFloat(localStorage.getItem("honkoku_fontsize")) || 11;
+    mainEditor.style.fontSize = currentFontSize + "pt";
     
-    // 初回アクセスかどうかのチェック
-    if (!localStorage.getItem('honkoku_agreed')) {
-        showModal(); // 同意記録がなければポップアップを出す
-    }
-
+    if (!localStorage.getItem('honkoku_agreed')) { showModal(); }
     updatePageInfo(); loadPage();
 }
 function resetData() {
-    if (confirm("全てのページ内容とメモを完全に消去して初期化しますか？")) {
+    if (confirm("全てのページ内容とメモを完全に消去して初期化しますか？\n（※この操作は取り消せません）")) {
         texts = []; notesData = []; currentPage = 0;
         localStorage.removeItem("honkoku_texts"); localStorage.removeItem("honkoku_notes"); localStorage.removeItem("honkoku_page");
         mainEditor.innerHTML = ""; notesEditor.innerHTML = ""; images = []; viewer.close();
-        updatePageInfo(); alert("リセット完了");
+        updatePageInfo(); alert("リセットが完了しました。");
     }
 }
 window.addEventListener('DOMContentLoaded', autoLoad);
@@ -301,7 +416,7 @@ function toggleFilter(t) { filterState[t] = !filterState[t]; applyFilters(); }
 function resetFilters() { filterState = { contrast: false, invert: false }; applyFilters(); viewer.viewport.setRotation(0); viewer.viewport.goHome(); }
 function rotate(d) { viewer.viewport.setRotation(viewer.viewport.getRotation() + d); }
 function toggleGuide() { guideLine.style.display = (guideLine.style.display === "none" || guideLine.style.display === "") ? "block" : "none"; }
-function execCmd(cmd, val=null) { document.execCommand(cmd, false, val); save(); }
+function execCmd(cmd, val=null) { document.execCommand(cmd, false, val); save(); mainEditor.focus(); }
 function setColor(c) { execCmd("foreColor", c); }
 
 document.getElementById("imgLoader").addEventListener("change", function(e) { images = Array.from(e.target.files); initPages(); });
@@ -316,8 +431,8 @@ async function loadManifest() {
             if (c.items) return c.items[0].items[0].body.service[0]['@id'] || c.items[0].items[0].body.service['id'];
             return null;
         }).filter(Boolean);
-        initPages(); alert("IIIF読込完了");
-    } catch (e) { alert("失敗"); }
+        initPages(); alert("IIIFマニフェストを読み込みました");
+    } catch (e) { alert("読み込みに失敗しました"); }
 }
 function initPages() {
     const total = images.length || 1;
@@ -350,8 +465,15 @@ function updatePageInfo() {
 function jumpPage(val) { save(); currentPage = parseInt(val); loadPage(); }
 function save() { texts[currentPage] = mainEditor.innerHTML; notesData[currentPage] = notesEditor.innerHTML; autoSave(); }
 mainEditor.addEventListener("input", save); notesEditor.addEventListener("input", save);
+
 function prevPage() { if (currentPage > 0) { save(); currentPage--; loadPage(); } }
 function nextPage() { if (currentPage < Math.max(images.length, texts.length) - 1) { save(); currentPage++; loadPage(); } }
+
+document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); nextPage(); } 
+    else if (e.key === 'ArrowRight') { e.preventDefault(); prevPage(); }
+}, true);
 
 /* --- 挿入・カーソル記憶 --- */
 function savePosition() {
@@ -381,18 +503,31 @@ hIn.addEventListener("keydown", function(e) {
 });
 
 const formatText = (h) => (h||"").replace(/<div>|<p>|<br>/gi,"\n").replace(/<\/div>|<\/p>/gi,"").replace(/<[^>]+>/g,"").trim();
-function copyCurrentPage() { save(); navigator.clipboard.writeText(formatText(mainEditor.innerHTML)); alert("コピーしました"); }
-function copyAll() { save(); let o = ""; texts.forEach((t, i) => o += `【${i+1}】\n${formatText(t)}\n\n`); navigator.clipboard.writeText(o); alert("全コピーしました"); }
-function exportSession() { save(); const b = new Blob([JSON.stringify({texts, notes:notesData, page:currentPage})], {type:"application/json"}); const l = document.createElement("a"); l.href=URL.createObjectURL(b); l.download="honkoku.json"; l.click(); }
+function copyCurrentPage() { save(); navigator.clipboard.writeText(formatText(mainEditor.innerHTML)); alert("現在のページをコピーしました"); }
+function copyAll() { save(); let o = ""; texts.forEach((t, i) => o += `【${i+1}】\n${formatText(t)}\n\n`); navigator.clipboard.writeText(o); alert("全てのページをコピーしました"); }
+
+function exportSession() { 
+    save(); 
+    const now = new Date();
+    const y = String(now.getFullYear()).slice(-2);
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    let fileName = prompt("保存するファイル名を入力してください：", `翻刻データ_${y}${m}${d}`);
+    if (fileName === null) return;
+    if (fileName.trim() === "") fileName = `翻刻データ_${y}${m}${d}`;
+    
+    const b = new Blob([JSON.stringify({texts, notes:notesData, page:currentPage})], {type:"application/json"}); 
+    const l = document.createElement("a"); 
+    l.href=URL.createObjectURL(b); 
+    l.download=fileName.endsWith(".json") ? fileName : fileName + ".json"; 
+    l.click(); 
+}
+
 document.getElementById("sessionLoader").addEventListener("change", function(e) {
     const f = e.target.files[0]; const r = new FileReader();
-    r.onload = ev => { const d = JSON.parse(ev.target.result); texts=d.texts; notesData=d.notes; currentPage=d.page; loadPage(); }; r.readAsText(f);
+    r.onload = ev => { const d = JSON.parse(ev.target.result); texts=d.texts; notesData=d.notes; currentPage=d.page; loadPage(); alert("作業データを読み込みました");}; r.readAsText(f);
+    e.target.value = "";
 });
 </script>
 </body>
 </html>
-
-
-
-
-
