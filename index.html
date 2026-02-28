@@ -9,7 +9,7 @@
 
 <style>
 /* =========================================
-   基本レイアウトとカラースキーム
+   基本レイアウトと和風カラースキーム
 ========================================= */
 :root {
   --control-bg: #f8f9fa;       
@@ -276,7 +276,7 @@ button:hover { background: #e9ecef; }
 
   <div class="control-group">
     <button onclick="copyCurrentPage()" title="現在のページをコピー">📄 頁写</button>
-    <button onclick="copyAll()" title="全てのページをコピー">📑 全写</button>
+    <button onclick="exportText()" title="テキストファイルとして出力">TXT出力</button>
     <span style="margin: 0 2px; color: #ccc;">|</span>
     <button onclick="exportSession()" style="font-weight:bold; color:#006600; background:#e6ffe6; border-color:#b3ffb3;">💾 作業保存</button>
     <button onclick="document.getElementById('sessionLoader').click()">📂 再開</button>
@@ -584,7 +584,56 @@ hIn.addEventListener("keydown", function(e) {
 
 const formatText = (h) => (h||"").replace(/<div>|<p>|<br>/gi,"\n").replace(/<\/div>|<\/p>/gi,"").replace(/<[^>]+>/g,"").trim();
 function copyCurrentPage() { save(); navigator.clipboard.writeText(formatText(mainEditor.innerHTML)); alert("現在のページをコピーしました"); }
-function copyAll() { save(); let o = ""; texts.forEach((t, i) => o += `【${i+1}】\n${formatText(t)}\n\n`); navigator.clipboard.writeText(o); alert("全てのページをコピーしました"); }
+
+function exportText() {
+    save(); // 最新の状態を保存
+    let output = "";
+    
+    // 全ページのテキストとメモをまとめる
+    texts.forEach((t, i) => {
+        const cleanText = formatText(t);
+        const cleanNote = formatText(notesData[i]); // ★ 備考メモも取得
+
+        // 本文かメモのどちらかが入力されていれば出力する
+        if (cleanText || cleanNote) {
+            output += `【${i+1}頁】\n`;
+            
+            if (cleanText) {
+                output += `${cleanText}\n`; // 本文を出力
+            }
+            
+            if (cleanNote) {
+                output += `\n[備考メモ]\n${cleanNote}\n`; // メモがあれば出力
+            }
+            
+            output += `\n`; // ページ間の区切りとして空行を入れる
+        }
+    });
+
+    if (output === "") {
+        alert("出力するテキストがありません。");
+        return;
+    }
+
+    // ファイル名をつけるための日付取得
+    const now = new Date();
+    const y = String(now.getFullYear()).slice(-2);
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    let fileName = prompt("保存するテキストのファイル名を入力してください：", `翻刻テキスト_${y}${m}${d}`);
+    
+    if (fileName === null) return; // キャンセルされたらやめる
+    if (fileName.trim() === "") fileName = `翻刻テキスト_${y}${m}${d}`;
+
+    // テキストファイルとしてダウンロード
+    const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName.endsWith(".txt") ? fileName : fileName + ".txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
 function exportSession() { 
     save(); 
@@ -636,5 +685,3 @@ function toggleNotes() {
 
 </body>
 </html>
-
-
