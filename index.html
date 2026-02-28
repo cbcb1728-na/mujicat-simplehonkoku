@@ -3,31 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-62MKPH6237"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-62MKPH6237');
-</script>
-   
 <title>Mujineko-Honkoku Tool</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
 
 <style>
 /* =========================================
-   基本レイアウトと和風カラースキーム
+   基本レイアウトとカラースキーム
 ========================================= */
 :root {
   --control-bg: #f8f9fa;       
   --border-color: #dcdcdc;     
   --viewer-bg: #1a1a1a;        
   --editor-bg: #ffffff;        
-  --notes-bg: #fffdf7;        
+  --notes-bg: #ffffcc;        
   --accent-color: #1c305c;     
   --text-main: #333333;        
   --resizer-width: 1px;        
@@ -167,12 +156,40 @@ button:hover { background: #e9ecef; }
 #horizontalInput:focus { border-color: var(--accent-color); }
 
 #editorRow { flex: 1; display: flex; min-height: 0; overflow: hidden; }
-#mainArea { width: 70%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--editor-bg); }
+#mainArea { width: 70%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--editor-bg); position: relative; }
 #notesArea { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--notes-bg); }
 
 .scrollWindow { flex: 1; width: 100%; position: relative; }
 #mainArea .scrollWindow { overflow-x: auto; overflow-y: hidden; }
 #notesArea .scrollWindow { overflow-x: hidden; overflow-y: auto; box-sizing: border-box; }
+
+/* ★ メモ開閉用 フローティングボタン（四角いメニューバー風デザイン） */
+#notesToggleBtn {
+  position: absolute;
+  top: 10px;
+  right: 15px; /* スクロールバーに被らないよう少し余白を持たせます */
+  z-index: 150;
+  
+  /* メニューバーにあった時と同じデザインの適用 */
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #1976d2;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* エディタの上で浮いているのが分かるように少し影をつける */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  transition: background 0.2s, transform 0.1s;
+}
+#notesToggleBtn:hover {
+  background: #f0f4f8;
+}
 
 /* 縦書きエディタ */
 .editor {
@@ -292,11 +309,12 @@ button:hover { background: #e9ecef; }
     </div>
 
     <div id="editorRow">
-      <div id="mainArea">
+      <div id="mainArea" style="width: 100%;">
+        <button id="notesToggleBtn" onclick="toggleNotes()" title="備考メモを開閉">📝 メモ</button>
         <div class="scrollWindow"><div id="mainEditor" class="editor" contenteditable="true"></div></div>
       </div>
-      <div id="resizerEditor" class="resizer"></div>
-      <div id="notesArea">
+      <div id="resizerEditor" class="resizer" style="display: none;"></div>
+      <div id="notesArea" style="display: none;">
         <div class="scrollWindow"><div id="notesEditor" placeholder="備考スペース（ページごとのメモが書きこめます）" contenteditable="true"></div></div>
       </div>
     </div>
@@ -315,10 +333,10 @@ button:hover { background: #e9ecef; }
           <strong>史料の読込：</strong> お手元の画像ファイルや、IIIFマニフェストURLから読み込めます。<br>
           <span style="font-size: 0.9em; color: #666; display: inline-block; margin-top: 4px;">※本ツールに読み込んだ画像や入力テキストは、すべてお使いのブラウザ内でのみ処理されます。外部サーバーへ送信されることはありませんので、未公開資料でも安心してご利用いただけます。</span>
         </li>
-        <li><strong>ページめくり：</strong> 画面上のボタン、またはキーボードの矢印キーで操作できます。※ページ送りの方向は縦書きの資料を想定しています。</li>
+        <li><strong>ページめくり：</strong> トップメニューの◀▶ボタン、またはキーボードの矢印キーで操作できます。※ページ送りの方向は縦書きの資料を想定しています。</li>
         <li><strong>画像ビューワ：</strong> 画面左部に読みこんだ史料を写します。左端のボタンからコントラストを調整したり、赤線をひっぱったりできます。</li>
         <li><strong>翻刻作業：</strong> 画面右部で翻刻作業をおこなえます。縦書きエディタでの入力がうまくいかない場合、上部のエディタから横書きで入力ののち、shift＋Enterで縦書きにできます。</li>
-        <li><strong>メモ：</strong> 縦書きエディタ右にあるのはメモ欄です。備考や注釈に使えます。</li>
+        <li><strong>メモ：</strong> 縦書きエディタ右上からメモ欄が開けます。備考や注釈にどうぞ。</li>
         <li><strong>作業保存：</strong> メモや手書きのデータはブラウザに自動保存されます。トップメニューの「💾 作業保存」でjsonファイルとしてダウンロードし、後で「📂 再開」からファイルを読み込めば作業を再開できます。</li>
       </ul>
       <h3>⚠️ 注意 ⚠️</h3>
@@ -590,10 +608,31 @@ document.getElementById("sessionLoader").addEventListener("change", function(e) 
     r.onload = ev => { const d = JSON.parse(ev.target.result); texts=d.texts; notesData=d.notes; currentPage=d.page; loadPage(); alert("作業データを読み込みました");}; r.readAsText(f);
     e.target.value = "";
 });
+
+/* --- 備考メモの開閉 --- */
+let lastMainWidth = "70%"; 
+
+function toggleNotes() {
+    const notes = document.getElementById("notesArea");
+    const resizer = document.getElementById("resizerEditor");
+    const main = document.getElementById("mainArea");
+
+    if (notes.style.display === "none") {
+        // 【開くときの処理】
+        notes.style.display = "flex";     
+        resizer.style.display = "block";  
+        main.style.width = lastMainWidth; 
+    } else {
+        // 【閉じるときの処理】
+        lastMainWidth = main.style.width || "70%"; 
+        notes.style.display = "none";     
+        resizer.style.display = "none";   
+        main.style.width = "100%";        
+    }
+}
 </script>
 
 <button id="menuToggleBtn" onclick="toggleMenu()" title="メニューを開閉">▲</button>
 
 </body>
 </html>
-
