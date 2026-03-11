@@ -58,8 +58,12 @@ button:hover { background: #e9ecef; }
   -webkit-overflow-scrolling: touch;
    
 }
+   
 .control-group { 
   display: flex; gap: 4px; align-items: center; border-right: 1px solid #ddd; padding-right: 8px; 
+
+   flex-shrink: 0; /
+
 }
 .control-group:nth-child(3) { margin-left: auto; }
 .control-group:last-child { border-right: none; padding-right: 0; }
@@ -706,6 +710,7 @@ function toggleNotes() {
 </script>
 </body>
 </html>
+
 
 
 
