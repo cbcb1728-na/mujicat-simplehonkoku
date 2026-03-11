@@ -53,6 +53,10 @@ button:hover { background: #e9ecef; }
   display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; 
   box-sizing: border-box; z-index: 300;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+   
 }
 .control-group { 
   display: flex; gap: 4px; align-items: center; border-right: 1px solid #ddd; padding-right: 8px; 
@@ -702,6 +706,7 @@ function toggleNotes() {
 </script>
 </body>
 </html>
+
 
 
 
